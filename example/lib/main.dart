@@ -2,8 +2,8 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 
-const countKey = ProviderKey<ValueNotifier<int>>();
-const countKey2 = ProviderKey<ValueNotifier<int>>();
+final countKey = ProviderKey<ValueNotifier<int>>();
+final countKey2 = ProviderKey<ValueNotifier<int>>();
 
 void main() {
   runApp(MyApp());
@@ -107,11 +107,13 @@ class TypeBuilders {
       ProviderKey<T> providerKey) {
     InheritedProviderBuilder<T>? builder =
         builders[providerKey] as InheritedProviderBuilder<T>?;
+    print('getOrCreate providerKey:${providerKey.hashCode}');
     if (builder == null) {
       int index = unUsedIns.removeLast();
       usedIns.addLast(index);
       builder = InheritedProviderBuilder(index);
       builders[providerKey] = builder;
+      print('builder == null  index:$index');
     }
     return builder;
   }
@@ -126,7 +128,7 @@ class TypeBuilders {
 }
 
 class ProviderKey<T extends ChangeNotifier> {
-  const ProviderKey();
+  ProviderKey();
 
   static final Map<Type, TypeBuilders> typeProviderBuilders = {};
 
@@ -163,17 +165,22 @@ class ProviderKey<T extends ChangeNotifier> {
   }
 
   T? read(BuildContext context) {
-    return getInheritedProviderBuilder()?.read<T>(context);
+    return getInheritedProviderBuilder()?.read(context);
   }
 
   T? watch(BuildContext context) {
-    return getInheritedProviderBuilder()?.watch<T>(context);
+    return getInheritedProviderBuilder()?.watch(context);
   }
 }
 
 ///----数据Provider
 class InheritedProvider<T> extends InheritedWidget {
   InheritedProvider({
+    required this.data,
+    required Widget child,
+  }) : super(child: child);
+
+  InheritedProvider.task({
     required this.data,
     required Widget child,
   }) : super(child: child);
@@ -250,86 +257,28 @@ class _ChangeNotifierProviderState<T extends ChangeNotifier>
 }
 
 class InheritedProviderBuilder<T> {
+  Map<int, InhFactory<InheritedProvider<T>, T>> factories = {
+    0: InhFactory<InA<T>, T>((data, child) => InA(data, child)),
+    1: InhFactory<InB<T>, T>((data, child) => InB(data, child)),
+    2: InhFactory<InC<T>, T>((data, child) => InC(data, child)),
+    3: InhFactory<InD<T>, T>((data, child) => InD(data, child)),
+    4: InhFactory<InE<T>, T>((data, child) => InE(data, child)),
+  };
+
   int index;
 
   InheritedProviderBuilder(this.index);
 
-  T watch<T>(BuildContext context) {
-    switch (index) {
-      case 0:
-        return context.dependOnInheritedWidgetOfExactType<InA<T>>()!.data;
-      case 1:
-        return context.dependOnInheritedWidgetOfExactType<InB<T>>()!.data;
-      case 2:
-        return context.dependOnInheritedWidgetOfExactType<InC<T>>()!.data;
-      case 3:
-        return context.dependOnInheritedWidgetOfExactType<InD<T>>()!.data;
-      case 4:
-      default:
-        return context.dependOnInheritedWidgetOfExactType<InE<T>>()!.data;
-    }
+  T watch(BuildContext context) {
+    return factories[index]!.watch(context);
   }
 
-  T watchIm<E extends InheritedProvider<T>, T>(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<E>()!.data;
-  }
-
-  T read<T>(BuildContext context) {
-    print('read index:$index');
-    switch (index) {
-      case 0:
-        return (context
-                .getElementForInheritedWidgetOfExactType<InA<T>>()!
-                .widget as InA<T>)
-            .data;
-      case 1:
-        return (context
-                .getElementForInheritedWidgetOfExactType<InB<T>>()!
-                .widget as InB<T>)
-            .data;
-      case 2:
-        return (context
-                .getElementForInheritedWidgetOfExactType<InC<T>>()!
-                .widget as InC<T>)
-            .data;
-      case 3:
-        return (context
-                .getElementForInheritedWidgetOfExactType<InD<T>>()!
-                .widget as InD<T>)
-            .data;
-      case 4:
-      default:
-        return (context
-                .getElementForInheritedWidgetOfExactType<InE<T>>()!
-                .widget as InE<T>)
-            .data;
-    }
+  T read(BuildContext context) {
+    return factories[index]!.read(context);
   }
 
   InheritedProvider<T> build(T data, Widget child) {
-    InheritedProvider<T> inP;
-    switch (index) {
-      case 0:
-        inP = InA<T>(data: data, child: child);
-        break;
-      case 1:
-        inP = InB<T>(data: data, child: child);
-        break;
-      case 2:
-        inP = InC<T>(data: data, child: child);
-        break;
-      case 3:
-        inP = InD<T>(data: data, child: child);
-        break;
-      case 3:
-        inP = InE<T>(data: data, child: child);
-        break;
-      case 4:
-      default:
-        inP = InE<T>(data: data, child: child);
-        break;
-    }
-    return inP;
+    return factories[index]!.buildInheritedProvider(data, child);
   }
 
   @override
@@ -338,27 +287,42 @@ class InheritedProviderBuilder<T> {
   }
 }
 
+class InhFactory<I extends InheritedProvider<T>, T> {
+  I Function(T data, Widget child) builder;
+
+  InhFactory(this.builder);
+
+  T read(BuildContext context) {
+    return (context.getElementForInheritedWidgetOfExactType<I>()!.widget
+            as InheritedProvider<T>)
+        .data;
+  }
+
+  I buildInheritedProvider(T data, Widget child) {
+    return builder(data, child);
+  }
+
+  T watch(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<I>()!.data;
+  }
+}
+
 class InA<T> extends InheritedProvider<T> {
-  InA({required T data, required Widget child})
-      : super(data: data, child: child);
+  InA(T data, Widget child) : super(data: data, child: child);
 }
 
 class InB<T> extends InheritedProvider<T> {
-  InB({required T data, required Widget child})
-      : super(data: data, child: child);
+  InB(T data, Widget child) : super(data: data, child: child);
 }
 
 class InC<T> extends InheritedProvider<T> {
-  InC({required T data, required Widget child})
-      : super(data: data, child: child);
+  InC(T data, Widget child) : super(data: data, child: child);
 }
 
 class InD<T> extends InheritedProvider<T> {
-  InD({required T data, required Widget child})
-      : super(data: data, child: child);
+  InD(T data, Widget child) : super(data: data, child: child);
 }
 
 class InE<T> extends InheritedProvider<T> {
-  InE({required T data, required Widget child})
-      : super(data: data, child: child);
+  InE(T data, Widget child) : super(data: data, child: child);
 }
