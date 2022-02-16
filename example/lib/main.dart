@@ -96,19 +96,21 @@ class CountWidget2 extends StatelessWidget {
 class ProviderKey<T extends ChangeNotifier> {
   ProviderKey();
 
-  static final Map<Type, InhFactories> typeInhFactories = {};
+  static final Map<Type, InheritedWidgetFactories> typeInhFactories = {};
 
   InheritedProvider<T> buildInh(T data, Widget child) {
-    InhFactories<T>? typeBuilders = typeInhFactories[T] as InhFactories<T>?;
+    InheritedWidgetFactories<T>? typeBuilders =
+        typeInhFactories[T] as InheritedWidgetFactories<T>?;
     if (typeBuilders == null) {
-      typeBuilders = InhFactories<T>();
+      typeBuilders = InheritedWidgetFactories<T>();
       typeInhFactories[T] = typeBuilders;
     }
     return typeBuilders.buildInh(this, data, child);
   }
 
   void dispose() {
-    InhFactories<T>? typeBuilders = typeInhFactories[T] as InhFactories<T>?;
+    InheritedWidgetFactories<T>? typeBuilders =
+        typeInhFactories[T] as InheritedWidgetFactories<T>?;
     if (typeBuilders != null) {
       typeBuilders.dispose(this);
     }
@@ -123,7 +125,8 @@ class ProviderKey<T extends ChangeNotifier> {
   }
 
   T? read(BuildContext context) {
-    InhFactories<T>? typeBuilders = typeInhFactories[T] as InhFactories<T>?;
+    InheritedWidgetFactories<T>? typeBuilders =
+        typeInhFactories[T] as InheritedWidgetFactories<T>?;
     if (typeBuilders == null) {
       return null;
     }
@@ -131,7 +134,8 @@ class ProviderKey<T extends ChangeNotifier> {
   }
 
   T? watch(BuildContext context) {
-    InhFactories<T>? typeBuilders = typeInhFactories[T] as InhFactories<T>?;
+    InheritedWidgetFactories<T>? typeBuilders =
+        typeInhFactories[T] as InheritedWidgetFactories<T>?;
     if (typeBuilders == null) {
       return null;
     }
@@ -220,46 +224,82 @@ class _ChangeNotifierProviderState<T extends ChangeNotifier>
   }
 }
 
-class InhFactories<T> {
-  final Map<int, InhFactory<InheritedProvider<T>, T>> factories = {
-    0: InhFactory<InA<T>, T>((data, child) => InA(data, child)),
-    1: InhFactory<InB<T>, T>((data, child) => InB(data, child)),
-    2: InhFactory<InC<T>, T>((data, child) => InC(data, child)),
-    3: InhFactory<InD<T>, T>((data, child) => InD(data, child)),
-    4: InhFactory<InE<T>, T>((data, child) => InE(data, child)),
-  };
-  Queue<int> unUsedIndex = Queue.of([0, 1, 2, 3, 4]);
+class InheritedWidgetFactories<T> {
+  static final List<int> indexList = [0, 1, 2, 3, 4];
+  Queue<int> unUsedIndex = Queue.of(indexList);
   Queue<int> usedIndex = Queue();
-  Map<ProviderKey, int> factoryIndexMap = {};
+  Map<ProviderKey, int> inhIndexMap = {};
 
   T? read(ProviderKey providerKey, BuildContext context) {
-    int? factoryIndex = factoryIndexMap[providerKey];
-    if (factoryIndex == null) {
+    int? inhIndex = inhIndexMap[providerKey];
+    if (inhIndex == null) {
       return null;
     }
-    return factories[factoryIndex]!.read(context);
+    switch (inhIndex) {
+      case 0:
+        return readImp<_Inh0<T>>(context);
+      case 1:
+        return readImp<_Inh1<T>>(context);
+      case 2:
+        return readImp<_Inh2<T>>(context);
+      case 3:
+        return readImp<_Inh3<T>>(context);
+      case 4:
+      default:
+        return readImp<_Inh4<T>>(context);
+    }
+  }
+
+  T? readImp<I extends InheritedProvider<T>>(BuildContext context) {
+    return (context.getElementForInheritedWidgetOfExactType<I>()!.widget
+            as InheritedProvider<T>)
+        .data;
   }
 
   T? watch(ProviderKey providerKey, BuildContext context) {
-    int? factoryIndex = factoryIndexMap[providerKey];
-    if (factoryIndex == null) {
+    int? inhIndex = inhIndexMap[providerKey];
+    if (inhIndex == null) {
       return null;
     }
-    return factories[factoryIndex]!.watch(context);
+    switch (inhIndex) {
+      case 0:
+        return context.dependOnInheritedWidgetOfExactType<_Inh0<T>>()!.data;
+      case 1:
+        return context.dependOnInheritedWidgetOfExactType<_Inh1<T>>()!.data;
+      case 2:
+        return context.dependOnInheritedWidgetOfExactType<_Inh2<T>>()!.data;
+      case 3:
+        return context.dependOnInheritedWidgetOfExactType<_Inh3<T>>()!.data;
+      case 4:
+      default:
+        return context.dependOnInheritedWidgetOfExactType<_Inh4<T>>()!.data;
+    }
   }
 
   InheritedProvider<T> buildInh(ProviderKey providerKey, T data, Widget child) {
-    int? factoryIndex = factoryIndexMap[providerKey];
-    if (factoryIndex == null) {
-      factoryIndex = unUsedIndex.removeFirst();
-      usedIndex.addLast(factoryIndex);
-      factoryIndexMap[providerKey] = factoryIndex;
+    int? inhIndex = inhIndexMap[providerKey];
+    if (inhIndex == null) {
+      inhIndex = unUsedIndex.removeFirst();
+      usedIndex.addLast(inhIndex);
+      inhIndexMap[providerKey] = inhIndex;
     }
-    return factories[factoryIndex]!.buildInheritedProvider(data, child);
+    switch (inhIndex) {
+      case 0:
+        return _Inh0(data, child);
+      case 1:
+        return _Inh1(data, child);
+      case 2:
+        return _Inh2(data, child);
+      case 3:
+        return _Inh3(data, child);
+      case 4:
+      default:
+        return _Inh4(data, child);
+    }
   }
 
   void dispose(ProviderKey providerKey) {
-    int? factoryIndex = factoryIndexMap.remove(providerKey);
+    int? factoryIndex = inhIndexMap.remove(providerKey);
     if (factoryIndex != null) {
       unUsedIndex.addLast(factoryIndex);
       usedIndex.remove(factoryIndex);
@@ -267,42 +307,22 @@ class InhFactories<T> {
   }
 }
 
-class InhFactory<I extends InheritedProvider<T>, T> {
-  I Function(T data, Widget child) builder;
-
-  InhFactory(this.builder);
-
-  T read(BuildContext context) {
-    return (context.getElementForInheritedWidgetOfExactType<I>()!.widget
-            as InheritedProvider<T>)
-        .data;
-  }
-
-  I buildInheritedProvider(T data, Widget child) {
-    return builder(data, child);
-  }
-
-  T watch(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<I>()!.data;
-  }
+class _Inh0<T> extends InheritedProvider<T> {
+  _Inh0(T data, Widget child) : super(data: data, child: child);
 }
 
-class InA<T> extends InheritedProvider<T> {
-  InA(T data, Widget child) : super(data: data, child: child);
+class _Inh1<T> extends InheritedProvider<T> {
+  _Inh1(T data, Widget child) : super(data: data, child: child);
 }
 
-class InB<T> extends InheritedProvider<T> {
-  InB(T data, Widget child) : super(data: data, child: child);
+class _Inh2<T> extends InheritedProvider<T> {
+  _Inh2(T data, Widget child) : super(data: data, child: child);
 }
 
-class InC<T> extends InheritedProvider<T> {
-  InC(T data, Widget child) : super(data: data, child: child);
+class _Inh3<T> extends InheritedProvider<T> {
+  _Inh3(T data, Widget child) : super(data: data, child: child);
 }
 
-class InD<T> extends InheritedProvider<T> {
-  InD(T data, Widget child) : super(data: data, child: child);
-}
-
-class InE<T> extends InheritedProvider<T> {
-  InE(T data, Widget child) : super(data: data, child: child);
+class _Inh4<T> extends InheritedProvider<T> {
+  _Inh4(T data, Widget child) : super(data: data, child: child);
 }
