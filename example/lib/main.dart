@@ -36,6 +36,7 @@ class HomePage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CountWidget(),
+                    SizedBox(height: 16),
                     CountWidget2(),
                   ],
                 ),
@@ -92,7 +93,7 @@ class CountWidget2 extends StatelessWidget {
   }
 }
 
-// -------------------------- 实现 -------------------------
+// -------------------------- im -------------------------
 class ProviderKey<T extends ChangeNotifier> {
   ProviderKey();
 
@@ -143,7 +144,6 @@ class ProviderKey<T extends ChangeNotifier> {
   }
 }
 
-///----数据Provider
 class InheritedProvider<T> extends InheritedWidget {
   InheritedProvider({
     required this.data,
@@ -159,14 +159,10 @@ class InheritedProvider<T> extends InheritedWidget {
 
   @override
   bool updateShouldNotify(InheritedProvider<T> old) {
-    //在此简单返回true，则每次更新都会调用依赖其的子孙节点的`didChangeDependencies`。
     return true;
   }
 }
 
-///使用StatefulWidget的state 注册ChangeNotifier监听变化，
-///重新创建InheritedProvider（随之重新build依赖数据的widget），
-///缓存InheritedProvider的child
 class ChangeNotifierProvider<T extends ChangeNotifier> extends StatefulWidget {
   ChangeNotifierProvider({
     Key? key,
@@ -187,7 +183,6 @@ class ChangeNotifierProvider<T extends ChangeNotifier> extends StatefulWidget {
 class _ChangeNotifierProviderState<T extends ChangeNotifier>
     extends State<ChangeNotifierProvider<T>> {
   void update() {
-    //如果数据发生变化（model类调用了notifyListeners），重新构建InheritedProvider
     setState(() {
       print('_ChangeNotifierProviderState setState');
     });
@@ -195,7 +190,6 @@ class _ChangeNotifierProviderState<T extends ChangeNotifier>
 
   @override
   void didUpdateWidget(ChangeNotifierProvider<T> oldWidget) {
-    //当Provider更新时，如果新旧数据不"=="，则解绑旧数据监听，同时添加新数据监听
     if (widget.data != oldWidget.data) {
       oldWidget.data.removeListener(update);
       widget.data.addListener(update);
@@ -205,14 +199,12 @@ class _ChangeNotifierProviderState<T extends ChangeNotifier>
 
   @override
   void initState() {
-    // 给model添加监听器
     widget.data.addListener(update);
     super.initState();
   }
 
   @override
   void dispose() {
-    // 移除model的监听器
     widget.data.removeListener(update);
     widget.providerKey.dispose();
     super.dispose();
