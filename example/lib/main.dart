@@ -169,11 +169,6 @@ class ProviderKey<T extends ChangeNotifier> {
   T? watch(BuildContext context) {
     return getInheritedProviderBuilder()?.watch<T>(context);
   }
-
-  @override
-  String toString() {
-    return name;
-  }
 }
 
 ///----数据Provider
