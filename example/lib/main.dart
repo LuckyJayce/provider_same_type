@@ -93,64 +93,22 @@ class CountWidget2 extends StatelessWidget {
 }
 
 // -------------------------- 实现 -------------------------
-class TypeBuilders {
-  Map<ProviderKey, InheritedProviderBuilder> builders = {};
-  Queue<int> unUsedIns = Queue.of([0, 1, 2, 3, 4]);
-  Queue<int> usedIns = Queue();
-
-  InheritedProviderBuilder<T>? get<T extends ChangeNotifier>(
-      ProviderKey<T> providerKey) {
-    return builders[providerKey] as InheritedProviderBuilder<T>?;
-  }
-
-  InheritedProviderBuilder<T> getOrCreate<T extends ChangeNotifier>(
-      ProviderKey<T> providerKey) {
-    InheritedProviderBuilder<T>? builder =
-        builders[providerKey] as InheritedProviderBuilder<T>?;
-    print('getOrCreate providerKey:${providerKey.hashCode}');
-    if (builder == null) {
-      int index = unUsedIns.removeLast();
-      usedIns.addLast(index);
-      builder = InheritedProviderBuilder(index);
-      builders[providerKey] = builder;
-      print('builder == null  index:$index');
-    }
-    return builder;
-  }
-
-  void dispose<T extends ChangeNotifier>(ProviderKey<T> providerKey) {
-    InheritedProviderBuilder? builder = builders.remove(providerKey);
-    if (builder != null) {
-      unUsedIns.addLast(builder.index);
-      usedIns.remove(builder.index);
-    }
-  }
-}
-
 class ProviderKey<T extends ChangeNotifier> {
   ProviderKey();
 
-  static final Map<Type, TypeBuilders> typeProviderBuilders = {};
+  static final Map<Type, InhFactories> typeInhFactories = {};
 
-  InheritedProviderBuilder<T>? getInheritedProviderBuilder() {
-    TypeBuilders? typeBuilders = typeProviderBuilders[T];
+  InheritedProvider<T> buildInh(T data, Widget child) {
+    InhFactories<T>? typeBuilders = typeInhFactories[T] as InhFactories<T>?;
     if (typeBuilders == null) {
-      return null;
+      typeBuilders = InhFactories<T>();
+      typeInhFactories[T] = typeBuilders;
     }
-    return typeBuilders.get<T>(this);
-  }
-
-  InheritedProviderBuilder<T> getOrCreateInheritedProviderBuilder() {
-    TypeBuilders? typeBuilders = typeProviderBuilders[T];
-    if (typeBuilders == null) {
-      typeBuilders = TypeBuilders();
-      typeProviderBuilders[T] = typeBuilders;
-    }
-    return typeBuilders.getOrCreate<T>(this);
+    return typeBuilders.buildInh(this, data, child);
   }
 
   void dispose() {
-    TypeBuilders? typeBuilders = typeProviderBuilders[T];
+    InhFactories<T>? typeBuilders = typeInhFactories[T] as InhFactories<T>?;
     if (typeBuilders != null) {
       typeBuilders.dispose(this);
     }
@@ -165,11 +123,19 @@ class ProviderKey<T extends ChangeNotifier> {
   }
 
   T? read(BuildContext context) {
-    return getInheritedProviderBuilder()?.read(context);
+    InhFactories<T>? typeBuilders = typeInhFactories[T] as InhFactories<T>?;
+    if (typeBuilders == null) {
+      return null;
+    }
+    return typeBuilders.read(this, context);
   }
 
   T? watch(BuildContext context) {
-    return getInheritedProviderBuilder()?.watch(context);
+    InhFactories<T>? typeBuilders = typeInhFactories[T] as InhFactories<T>?;
+    if (typeBuilders == null) {
+      return null;
+    }
+    return typeBuilders.watch(this, context);
   }
 }
 
@@ -250,40 +216,54 @@ class _ChangeNotifierProviderState<T extends ChangeNotifier>
 
   @override
   Widget build(BuildContext context) {
-    InheritedProviderBuilder<T> builder =
-        widget.providerKey.getOrCreateInheritedProviderBuilder();
-    return builder.build(widget.data, widget.child);
+    return widget.providerKey.buildInh(widget.data, widget.child);
   }
 }
 
-class InheritedProviderBuilder<T> {
-  Map<int, InhFactory<InheritedProvider<T>, T>> factories = {
+class InhFactories<T> {
+  final Map<int, InhFactory<InheritedProvider<T>, T>> factories = {
     0: InhFactory<InA<T>, T>((data, child) => InA(data, child)),
     1: InhFactory<InB<T>, T>((data, child) => InB(data, child)),
     2: InhFactory<InC<T>, T>((data, child) => InC(data, child)),
     3: InhFactory<InD<T>, T>((data, child) => InD(data, child)),
     4: InhFactory<InE<T>, T>((data, child) => InE(data, child)),
   };
+  Queue<int> unUsedIndex = Queue.of([0, 1, 2, 3, 4]);
+  Queue<int> usedIndex = Queue();
+  Map<ProviderKey, int> factoryIndexMap = {};
 
-  int index;
-
-  InheritedProviderBuilder(this.index);
-
-  T watch(BuildContext context) {
-    return factories[index]!.watch(context);
+  T? read(ProviderKey providerKey, BuildContext context) {
+    int? factoryIndex = factoryIndexMap[providerKey];
+    if (factoryIndex == null) {
+      return null;
+    }
+    return factories[factoryIndex]!.read(context);
   }
 
-  T read(BuildContext context) {
-    return factories[index]!.read(context);
+  T? watch(ProviderKey providerKey, BuildContext context) {
+    int? factoryIndex = factoryIndexMap[providerKey];
+    if (factoryIndex == null) {
+      return null;
+    }
+    return factories[factoryIndex]!.watch(context);
   }
 
-  InheritedProvider<T> build(T data, Widget child) {
-    return factories[index]!.buildInheritedProvider(data, child);
+  InheritedProvider<T> buildInh(ProviderKey providerKey, T data, Widget child) {
+    int? factoryIndex = factoryIndexMap[providerKey];
+    if (factoryIndex == null) {
+      factoryIndex = unUsedIndex.removeFirst();
+      usedIndex.addLast(factoryIndex);
+      factoryIndexMap[providerKey] = factoryIndex;
+    }
+    return factories[factoryIndex]!.buildInheritedProvider(data, child);
   }
 
-  @override
-  String toString() {
-    return 'InheritedProviderBuilder{index: $index}';
+  void dispose(ProviderKey providerKey) {
+    int? factoryIndex = factoryIndexMap.remove(providerKey);
+    if (factoryIndex != null) {
+      unUsedIndex.addLast(factoryIndex);
+      usedIndex.remove(factoryIndex);
+    }
   }
 }
 
